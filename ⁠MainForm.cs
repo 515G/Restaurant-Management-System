@@ -1,0 +1,170 @@
+// =================================================================
+// اسم المشروع: نظام إدارة مطعم متكامل - المرحلة الثانية (case 2)
+// المطور: عبد الرحمن
+// التقنيات: C# | Windows Forms (GUI) | Object-Oriented Programming (OOP)
+// =================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace RestaurantManagementSystem
+{
+    public class MenuItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public double Price { get; set; }
+        public string Category { get; set; }
+
+        public MenuItem(int id, string name, double price, string category)
+        {
+            Id = id;
+            Name = name;
+            Price = price;
+            Category = category;
+        }
+
+        public override string ToString() => $"{Name} - {Price} JD";
+    }
+
+    public class Table
+    {
+        public int TableNumber { get; set; }
+        public bool IsOccupied { get; set; }
+
+        public Table(int number)
+        {
+            TableNumber = number;
+            IsOccupied = false;
+        }
+    }
+
+    public class Order
+    {
+        public int OrderId { get; set; }
+        public int TableNumber { get; set; }
+        public List<MenuItem> Items { get; set; } = new List<MenuItem>();
+        public DateTime OrderTime { get; set; }
+
+        public double TotalAmount => Items.Sum(item => item.Price);
+
+        public Order(int orderId, int tableNumber)
+        {
+            OrderId = orderId;
+            TableNumber = tableNumber;
+            OrderTime = DateTime.Now;
+        }
+    }
+
+    public partial class MainForm : Form
+    {
+        private List<MenuItem> menuList = new List<MenuItem>();
+        private List<Table> tableList = new List<Table>();
+        private Order currentOrder;
+        private int orderCounter = 1;
+
+        private ListBox lstMenu = new ListBox();
+        private ListBox lstCurrentOrder = new ListBox();
+        private ComboBox cmbTables = new ComboBox();
+        private Label lblTotal = new Label();
+        private Button btnAddItem = new Button();
+        private Button btnRemoveItem = new Button();
+        private Button btnCheckout = new Button();
+
+        public MainForm()
+        {
+            LoadInitialData();
+            InitializeCurrentOrder();
+        }
+
+        private void LoadInitialData()
+        {
+            menuList.Add(new MenuItem(1, "شاورما سوبر", 3.50, "وجبات"));
+            menuList.Add(new MenuItem(2, "برغر لحم", 4.00, "وجبات"));
+            menuList.Add(new MenuItem(3, "بيتزا خضار", 5.50, "وجبات"));
+            menuList.Add(new MenuItem(4, "بيبسي", 0.50, "مشروبات"));
+            menuList.Add(new MenuItem(5, "ماء", 0.25, "مشروبات"));
+
+            foreach (var item in menuList)
+            {
+                lstMenu.Items.Add(item);
+            }
+
+            for (int i = 1; i <= 5; i++)
+            {
+                tableList.Add(new Table(i));
+                cmbTables.Items.Add($"طاولة {i}");
+            }
+            cmbTables.SelectedIndex = 0;
+        }
+
+        private void InitializeCurrentOrder()
+        {
+            int selectedTable = cmbTables.SelectedIndex + 1;
+            currentOrder = new Order(orderCounter++, selectedTable);
+            UpdateOrderUI();
+        }
+
+        private void UpdateOrderUI()
+        {
+            lstCurrentOrder.Items.Clear();
+            foreach (var item in currentOrder.Items)
+            {
+                lstCurrentOrder.Items.Add(item);
+            }
+            
+            lblTotal.Text = $"إجمالي الفاتورة: {currentOrder.TotalAmount:F2} JD";
+        }
+
+        private void btnAddItem_Click(object sender, EventArgs e)
+        {
+            if (lstMenu.SelectedItem is MenuItem selectedItem)
+            {
+                currentOrder.Items.Add(selectedItem);
+                UpdateOrderUI();
+            }
+            else
+            {
+                MessageBox.Show("الرجاء اختيار صنف من قائمة الطعام أولاً.", "تنبيه", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void btnRemoveItem_Click(object sender, EventArgs e)
+        {
+            if (lstCurrentOrder.SelectedItem is MenuItem selectedItem)
+            {
+                currentOrder.Items.Remove(selectedItem);
+                UpdateOrderUI();
+            }
+            else
+            {
+                MessageBox.Show("الرجاء اختيار صنف من سلة الطلبات لحذفه.", "تنبيه", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void btnCheckout_Click(object sender, EventArgs e)
+        {
+            if (currentOrder.Items.Count == 0)
+            {
+                MessageBox.Show("لا يمكن إنهاء طلب فارغ!", "خطأ", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            int currentTableIdx = cmbTables.SelectedIndex;
+            tableList[currentTableIdx].IsOccupied = true;
+
+            string receipt = $"--- فاتورة مطعم رقم ({currentOrder.OrderId}) ---\n" +
+                             $"التاريخ: {currentOrder.OrderTime}\n" +
+                             $"الطاولة: {currentOrder.TableNumber}\n" +
+                             $"-----------------------------------\n" +
+                             $"المجموع النهائي: {currentOrder.TotalAmount:F2} JD\n\n" +
+                             $"تم إنهاء الطلب بنجاح، وتحديث حالة الطاولة، ومحاكاة الحفظ!";
+            
+            MessageBox.Show(receipt, "طباعة الفاتورة آلياً", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            InitializeCurrentOrder();
+        }
+    }
+}
